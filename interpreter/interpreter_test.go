@@ -49,6 +49,14 @@ func TestMovePtr(t *testing.T) {
 	if i.Tape[3] != 0 {
 		t.Errorf("expected fourth cell to be 0, got %d", i.Tape[3])
 	}
+
+	i, err := New("<")
+	if err != nil {
+		t.Errorf("error during interpreter creation: %v", err)
+	}
+	if err := i.Run(); err == nil {
+		t.Error("expected error for tape pointer underflow")
+	}
 }
 
 func TestLoop(t *testing.T) {

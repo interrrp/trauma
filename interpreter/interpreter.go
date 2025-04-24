@@ -80,6 +80,9 @@ func (i *Interpreter) Run() error {
 				i.Tape = append(i.Tape, 0)
 			}
 		case '<':
+			if i.tapePtr == 0 {
+				return fmt.Errorf("tape pointer underflow at index %d", i.progPtr)
+			}
 			i.tapePtr--
 		case '[':
 			if i.Tape[i.tapePtr] == 0 {
