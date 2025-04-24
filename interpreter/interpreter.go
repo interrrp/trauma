@@ -69,30 +69,35 @@ func (i *Interpreter) Run() error {
 	for i.progPtr < len(i.prog) {
 		c := i.prog[i.progPtr]
 
-		if c == '+' {
-			i.Tape[i.tapePtr] += 1
-		} else if c == '-' {
-			i.Tape[i.tapePtr] -= 1
-		} else if c == '>' {
-			if i.tapePtr+1 > len(i.Tape)-1 {
+		switch c {
+		case '+':
+			i.Tape[i.tapePtr]++
+		case '-':
+			i.Tape[i.tapePtr]--
+		case '>':
+			i.tapePtr++
+			if i.tapePtr >= len(i.Tape) {
 				i.Tape = append(i.Tape, 0)
 			}
-			i.tapePtr += 1
-		} else if c == '<' {
-			i.tapePtr -= 1
-		} else if c == '[' && i.Tape[i.tapePtr] == 0 {
-			i.progPtr = i.bracketIndices[i.progPtr]
-			continue
-		} else if c == ']' && i.Tape[i.tapePtr] != 0 {
-			i.progPtr = i.bracketIndices[i.progPtr]
-			continue
-		} else if c == ',' {
+		case '<':
+			i.tapePtr--
+		case '[':
+			if i.Tape[i.tapePtr] == 0 {
+				i.progPtr = i.bracketIndices[i.progPtr]
+				continue
+			}
+		case ']':
+			if i.Tape[i.tapePtr] != 0 {
+				i.progPtr = i.bracketIndices[i.progPtr]
+				continue
+			}
+		case ',':
 			b := make([]byte, 1)
 			if _, err := i.Reader.Read(b); err != nil {
 				return err
 			}
 			i.Tape[i.tapePtr] = b[0]
-		} else if c == '.' {
+		case '.':
 			b := i.Tape[i.tapePtr]
 			s := []byte{b}
 			if _, err := bufWriter.Write(s); err != nil {
