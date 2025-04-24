@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -63,6 +64,8 @@ func (i *Interpreter) computeBracketIndices() error {
 }
 
 func (i *Interpreter) Run() error {
+	bufWriter := bufio.NewWriter(i.Writer)
+
 	for i.progPtr < len(i.prog) {
 		c := i.prog[i.progPtr]
 
@@ -92,12 +95,21 @@ func (i *Interpreter) Run() error {
 		} else if c == '.' {
 			b := i.Tape[i.tapePtr]
 			s := []byte{b}
-			if _, err := i.Writer.Write(s); err != nil {
+			if _, err := bufWriter.Write(s); err != nil {
 				return err
+			}
+			if b == '\n' {
+				if err := bufWriter.Flush(); err != nil {
+					return err
+				}
 			}
 		}
 
 		i.progPtr += 1
+	}
+
+	if err := bufWriter.Flush(); err != nil {
+		return err
 	}
 
 	return nil
