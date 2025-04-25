@@ -76,8 +76,8 @@ func TestOutput(t *testing.T) {
 }
 
 func expectCell(t *testing.T, i *Interpreter, idx int, val uint8) {
-	if i.Tape[idx] != val {
-		t.Errorf("expected cell %d to be %d, got %d", idx, val, i.Tape[idx])
+	if i.Tape()[idx] != val {
+		t.Errorf("expected cell %d to be %d, got %d", idx, val, i.tape[idx])
 	}
 }
 

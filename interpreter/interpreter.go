@@ -12,7 +12,7 @@ type Interpreter struct {
 	progPtr        int
 	bracketIndices map[int]int
 
-	Tape    []uint8
+	tape    []byte
 	tapePtr int
 
 	Reader io.Reader
@@ -25,7 +25,7 @@ func New(program string) (*Interpreter, error) {
 		progPtr:        0,
 		bracketIndices: map[int]int{},
 
-		Tape:    []uint8{0},
+		tape:    []byte{0},
 		tapePtr: 0,
 
 		Reader: os.Stdin,
@@ -38,6 +38,8 @@ func New(program string) (*Interpreter, error) {
 
 	return i, nil
 }
+
+func (i *Interpreter) Tape() []byte { return i.tape }
 
 func (i *Interpreter) computeBracketIndices() error {
 	var stack []int
@@ -71,13 +73,13 @@ func (i *Interpreter) Run() error {
 
 		switch c {
 		case '+':
-			i.Tape[i.tapePtr]++
+			i.tape[i.tapePtr]++
 		case '-':
-			i.Tape[i.tapePtr]--
+			i.tape[i.tapePtr]--
 		case '>':
 			i.tapePtr++
-			if i.tapePtr >= len(i.Tape) {
-				i.Tape = append(i.Tape, 0)
+			if i.tapePtr >= len(i.tape) {
+				i.tape = append(i.tape, 0)
 			}
 		case '<':
 			if i.tapePtr == 0 {
@@ -85,12 +87,12 @@ func (i *Interpreter) Run() error {
 			}
 			i.tapePtr--
 		case '[':
-			if i.Tape[i.tapePtr] == 0 {
+			if i.tape[i.tapePtr] == 0 {
 				i.progPtr = i.bracketIndices[i.progPtr]
 				continue
 			}
 		case ']':
-			if i.Tape[i.tapePtr] != 0 {
+			if i.tape[i.tapePtr] != 0 {
 				i.progPtr = i.bracketIndices[i.progPtr]
 				continue
 			}
@@ -99,9 +101,9 @@ func (i *Interpreter) Run() error {
 			if _, err := i.Reader.Read(b); err != nil {
 				return err
 			}
-			i.Tape[i.tapePtr] = b[0]
+			i.tape[i.tapePtr] = b[0]
 		case '.':
-			b := i.Tape[i.tapePtr]
+			b := i.tape[i.tapePtr]
 			s := []byte{b}
 			if _, err := bufWriter.Write(s); err != nil {
 				return err
