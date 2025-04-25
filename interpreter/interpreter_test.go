@@ -2,101 +2,92 @@ package interpreter
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 )
 
 func TestIncrement(t *testing.T) {
-	i := run(t, "+++")
-	expectCell(t, i, 0, 3)
+	r := mustRun(t, "+++")
+	assertCell(t, r, 0, 3)
 
-	i = run(t, "+++++")
-	expectCell(t, i, 0, 5)
+	r = mustRun(t, "+++++")
+	assertCell(t, r, 0, 5)
 }
 
 func TestDecrement(t *testing.T) {
-	i := run(t, "++-")
-	expectCell(t, i, 0, 1)
+	r := mustRun(t, "++-")
+	assertCell(t, r, 0, 1)
 
-	i = run(t, "---")
-	expectCell(t, i, 0, 255-2)
+	r = mustRun(t, "---")
+	assertCell(t, r, 0, 255-2)
 }
 
 func TestMovePtr(t *testing.T) {
-	i := run(t, ">>><")
-	if i.tapePtr != 2 {
-		t.Errorf("expected tape pointer to be 1, got %d", i.tapePtr)
+	r := mustRun(t, ">>><")
+	if r.tapePtr != 2 {
+		t.Errorf("expected tape pointer to be 1, got %d", r.tapePtr)
 	}
 
-	i = run(t, "+>++>><+++")
-	expectCell(t, i, 0, 1)
-	expectCell(t, i, 1, 2)
-	expectCell(t, i, 2, 3)
-	expectCell(t, i, 3, 0)
+	r = mustRun(t, "+>++>><+++")
+	assertCell(t, r, 0, 1)
+	assertCell(t, r, 1, 2)
+	assertCell(t, r, 2, 3)
+	assertCell(t, r, 3, 0)
 
-	i = mustNew(t, "<")
-	if err := i.Run(); err == nil {
+	if _, err := Run("<"); err == nil {
 		t.Error("expected error for tape pointer underflow")
 	}
 }
 
 func TestLoop(t *testing.T) {
-	i := run(t, "+++[-]")
-	expectCell(t, i, 0, 0)
+	r := mustRun(t, "+++[-]")
+	assertCell(t, r, 0, 0)
 
-	if _, err := New("[[[]]]"); err != nil {
+	if _, err := Run("[[[]]]"); err != nil {
 		t.Errorf("error on valid syntax: %v", err)
 	}
 
-	if _, err := New("[]]"); err == nil {
+	if _, err := Run("[]]"); err == nil {
 		t.Error("expected error on invalid syntax")
 	}
 
-	if _, err := New("[[["); err == nil {
+	if _, err := Run("[[["); err == nil {
 		t.Error("expected error on invalid syntax")
 	}
 }
 
 func TestInput(t *testing.T) {
-	i := mustNew(t, ",")
-	i.Reader = strings.NewReader("A")
-	mustRun(t, i)
-	expectCell(t, i, 0, 'A')
+	r, err := RunWithCustomIO(",", strings.NewReader("A"), io.Discard)
+	if err != nil {
+		t.Errorf("error during execution: %v", err)
+	}
+	assertCell(t, r, 0, 'A')
 }
 
 func TestOutput(t *testing.T) {
-	i := mustNew(t, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.")
 	var writer bytes.Buffer
-	i.Writer = &writer
+	_, err := RunWithCustomIO("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.", strings.NewReader(""), &writer)
+	if err != nil {
+		t.Errorf("error during execution: %v", err)
+	}
 
-	mustRun(t, i)
 	if writer.String() != "A" {
 		t.Errorf("expected output to be %q, got %q", "A", writer.String())
 	}
 }
 
-func expectCell(t *testing.T, i *Interpreter, idx int, val uint8) {
-	if i.Tape()[idx] != val {
-		t.Errorf("expected cell %d to be %d, got %d", idx, val, i.tape[idx])
-	}
-}
-
-func mustNew(t *testing.T, prog string) *Interpreter {
-	i, err := New(prog)
+func mustRun(t *testing.T, program string) *Result {
+	r, err := Run(program)
 	if err != nil {
-		t.Errorf("unexpected error during interpreter creation: %v", err)
+		t.Errorf("error during execution: %v", err)
 	}
-	return i
+	return r
 }
 
-func mustRun(t *testing.T, i *Interpreter) {
-	if err := i.Run(); err != nil {
-		t.Errorf("unexpected error during execution: %v", err)
+func assertCell(t *testing.T, r *Result, idx int, val byte) {
+	actual := r.Tape()[idx]
+	if actual != val {
+		t.Errorf("expected cell %d to be %d, got %d", idx, val, actual)
 	}
-}
-
-func run(t *testing.T, prog string) *Interpreter {
-	i := mustNew(t, prog)
-	mustRun(t, i)
-	return i
 }

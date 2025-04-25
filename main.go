@@ -19,12 +19,7 @@ func main() {
 	}
 	prog := string(b)
 
-	i, err := interpreter.New(prog)
-	if err != nil {
-		fail("failed to create interpreter: %v", err)
-	}
-
-	if err := i.Run(); err != nil {
+	if _, err := interpreter.Run(prog); err != nil {
 		fail("%v", err)
 	}
 }

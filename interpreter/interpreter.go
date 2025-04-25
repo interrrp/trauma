@@ -7,44 +7,87 @@ import (
 	"os"
 )
 
-type Interpreter struct {
-	prog           string
-	progPtr        int
-	bracketIndices map[int]int
-
-	tape    []byte
-	tapePtr int
-
-	Reader io.Reader
-	Writer io.Writer
-}
-
-func New(program string) (*Interpreter, error) {
-	i := &Interpreter{
-		prog:           program,
-		progPtr:        0,
-		bracketIndices: map[int]int{},
+// Run runs a Brainfuck program.
+//
+// Run will use os.Stdin and os.Stdout for the input (,) and output (.) commands,
+// equivalent to RunWithCustomIO(program, os.Stdin, os.Stdout).
+func Run(program string) (*Result, error) {
+	i := interpreter{
+		program:         program,
+		programPtr:      0,
+		bracketIndexMap: map[int]int{},
 
 		tape:    []byte{0},
 		tapePtr: 0,
 
-		Reader: os.Stdin,
-		Writer: os.Stdout,
+		reader: os.Stdin,
+		writer: os.Stdout,
 	}
 
-	if err := i.computeBracketIndices(); err != nil {
+	if err := i.buildBracketIndexMap(); err != nil {
 		return nil, err
 	}
 
-	return i, nil
+	if err := i.run(); err != nil {
+		return nil, err
+	}
+
+	return newResult(&i), nil
 }
 
-func (i *Interpreter) Tape() []byte { return i.tape }
+// RunWithCustomIO runs a Brainfuck program using the given readers and writers
+// for the input (,) and output (.) commands.
+func RunWithCustomIO(program string, reader io.Reader, writer io.Writer) (*Result, error) {
+	i := interpreter{
+		program:         program,
+		programPtr:      0,
+		bracketIndexMap: map[int]int{},
 
-func (i *Interpreter) computeBracketIndices() error {
+		tape:    []byte{0},
+		tapePtr: 0,
+
+		reader: reader,
+		writer: writer,
+	}
+
+	if err := i.buildBracketIndexMap(); err != nil {
+		return nil, err
+	}
+
+	if err := i.run(); err != nil {
+		return nil, err
+	}
+
+	return newResult(&i), nil
+}
+
+type Result struct {
+	tape    []byte
+	tapePtr int
+}
+
+func newResult(i *interpreter) *Result {
+	return &Result{tape: i.tape, tapePtr: i.tapePtr}
+}
+func (r *Result) Tape() []byte { return r.tape }
+func (r *Result) TapePtr() int { return r.tapePtr }
+
+type interpreter struct {
+	program         string
+	programPtr      int
+	bracketIndexMap map[int]int
+
+	tape    []uint8
+	tapePtr int
+
+	reader io.Reader
+	writer io.Writer
+}
+
+func (i *interpreter) buildBracketIndexMap() error {
 	var stack []int
 
-	for idx, c := range i.prog {
+	for idx, c := range i.program {
 		if c == '[' {
 			stack = append(stack, idx)
 		} else if c == ']' {
@@ -52,8 +95,8 @@ func (i *Interpreter) computeBracketIndices() error {
 				return fmt.Errorf("] with no matching [ at index %d", idx)
 			}
 			openIdx := stack[len(stack)-1]
-			i.bracketIndices[idx] = openIdx
-			i.bracketIndices[openIdx] = idx
+			i.bracketIndexMap[idx] = openIdx
+			i.bracketIndexMap[openIdx] = idx
 			stack = stack[:len(stack)-1]
 		}
 	}
@@ -65,17 +108,16 @@ func (i *Interpreter) computeBracketIndices() error {
 	return nil
 }
 
-func (i *Interpreter) Run() error {
-	bufWriter := bufio.NewWriter(i.Writer)
+func (i *interpreter) run() error {
+	bufWriter := bufio.NewWriter(i.writer)
 
-	for i.progPtr < len(i.prog) {
-		c := i.prog[i.progPtr]
-
-		switch c {
+	for i.programPtr < len(i.program) {
+		switch i.program[i.programPtr] {
 		case '+':
 			i.tape[i.tapePtr]++
 		case '-':
 			i.tape[i.tapePtr]--
+
 		case '>':
 			i.tapePtr++
 			if i.tapePtr >= len(i.tape) {
@@ -83,22 +125,24 @@ func (i *Interpreter) Run() error {
 			}
 		case '<':
 			if i.tapePtr == 0 {
-				return fmt.Errorf("tape pointer underflow at index %d", i.progPtr)
+				return fmt.Errorf("tape pointer underflow at index %d", i.programPtr)
 			}
 			i.tapePtr--
+
 		case '[':
 			if i.tape[i.tapePtr] == 0 {
-				i.progPtr = i.bracketIndices[i.progPtr]
+				i.programPtr = i.bracketIndexMap[i.programPtr]
 				continue
 			}
 		case ']':
 			if i.tape[i.tapePtr] != 0 {
-				i.progPtr = i.bracketIndices[i.progPtr]
+				i.programPtr = i.bracketIndexMap[i.programPtr]
 				continue
 			}
+
 		case ',':
 			b := make([]byte, 1)
-			if _, err := i.Reader.Read(b); err != nil {
+			if _, err := i.reader.Read(b); err != nil {
 				return err
 			}
 			i.tape[i.tapePtr] = b[0]
@@ -115,7 +159,7 @@ func (i *Interpreter) Run() error {
 			}
 		}
 
-		i.progPtr += 1
+		i.programPtr += 1
 	}
 
 	if err := bufWriter.Flush(); err != nil {
