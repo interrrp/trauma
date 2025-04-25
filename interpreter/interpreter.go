@@ -77,7 +77,7 @@ type interpreter struct {
 	programPtr      int
 	bracketIndexMap map[int]int
 
-	tape    []uint8
+	tape    []byte
 	tapePtr int
 
 	reader io.Reader
