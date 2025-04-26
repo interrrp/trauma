@@ -27,8 +27,8 @@ trauma path
   - `.` Output byte at current cell
   - `,` Read byte into current cell
 
-- Automatic tape expansion
-- Proper bracket matching and validation
+- Compiles programs into fast bytecode
+- Infinite tape size
 
 ## Examples
 
