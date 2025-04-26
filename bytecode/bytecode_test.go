@@ -44,6 +44,19 @@ func TestIO(t *testing.T) {
 		"Output")
 }
 
+func TestEmptyCell(t *testing.T) {
+	assertBytecode(t, "+++[-]",
+		"CellInc 3",
+		"EmptyCell")
+
+	assertBytecode(t, "+[++[-]]",
+		"CellInc 1",
+		"LoopStart",
+		"CellInc 2",
+		"EmptyCell",
+		"LoopEnd")
+}
+
 func assertBytecode(t *testing.T, program string, expected ...string) {
 	b, err := Compile(program)
 	if err != nil {

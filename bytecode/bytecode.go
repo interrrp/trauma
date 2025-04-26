@@ -46,7 +46,13 @@ func (c *compiler) compile() (Bytecode, error) {
 			}
 
 		case '[':
-			b = append(b, &LoopStart{})
+			if len(c.program)-1-c.programPtr >= 2 && c.program[c.programPtr:c.programPtr+3] == "[-]" {
+				b = append(b, &CellEmpty{})
+				c.advance()
+				c.advance()
+			} else {
+				b = append(b, &LoopStart{})
+			}
 		case ']':
 			b = append(b, &LoopEnd{})
 

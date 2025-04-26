@@ -13,6 +13,11 @@ func (ci *CellInc) Name() string   { return "CellInc" }
 func (ci *CellInc) Amount() int    { return ci.amount }
 func (ci *CellInc) String() string { return fmt.Sprintf("%s %d", ci.Name(), ci.Amount()) }
 
+type CellEmpty struct{}
+
+func (ce *CellEmpty) Name() string   { return "EmptyCell" }
+func (ce *CellEmpty) String() string { return ce.Name() }
+
 type PtrInc struct{ amount int }
 
 func (pi *PtrInc) Name() string   { return "PtrInc" }

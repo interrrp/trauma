@@ -79,6 +79,9 @@ func (i *bytecodeInterpreter) run() error {
 		case *bytecode.CellInc:
 			i.tape[i.tapePtr] = byte(int(i.tape[i.tapePtr]) + inst.Amount())
 
+		case *bytecode.CellEmpty:
+			i.tape[i.tapePtr] = 0
+
 		case *bytecode.PtrInc:
 			i.tapePtr += inst.Amount()
 
