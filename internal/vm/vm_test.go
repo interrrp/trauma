@@ -52,6 +52,10 @@ func TestLoop(t *testing.T) {
 	if _, err := runProg("[[["); err == nil {
 		t.Error("expected error on invalid syntax")
 	}
+
+	if _, err := runProg("[]]"); err == nil {
+		t.Error("expected error on invalid syntax")
+	}
 }
 
 var (
