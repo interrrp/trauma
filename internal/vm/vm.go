@@ -13,10 +13,12 @@ func Run(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) (*Result, err
 	return v.run()
 }
 
+const tapePreallocSize = 50_000_000
+
 type vm struct {
-	bytecode  bytecode.Bytecode
-	bcPtr     int
-	loopStack []int
+	bytecode     bytecode.Bytecode
+	bytecodePtr  int
+	loopIndexMap []int
 
 	tape    []byte
 	tapePtr int
@@ -27,11 +29,10 @@ type vm struct {
 
 func newVm(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) *vm {
 	return &vm{
-		bytecode:  bc,
-		bcPtr:     0,
-		loopStack: []int{},
+		bytecode:    bc,
+		bytecodePtr: 0,
 
-		tape:    []byte{0},
+		tape:    make([]byte, tapePreallocSize),
 		tapePtr: 0,
 
 		reader: reader,
@@ -39,13 +40,49 @@ func newVm(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) *vm {
 	}
 }
 
+func (v *vm) buildLoopIndexMap() error {
+	var stack []int
+
+	v.loopIndexMap = make([]int, len(v.bytecode))
+	for i := range v.loopIndexMap {
+		v.loopIndexMap[i] = -1
+	}
+
+	for i, inst := range v.bytecode {
+		switch inst.(type) {
+		case *bytecode.LoopStart:
+			stack = append(stack, i)
+
+		case *bytecode.LoopEnd:
+			if len(stack) == 0 {
+				return fmt.Errorf("unmatched ending bracket at instruction %d", i)
+			}
+
+			startIdx := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+
+			v.loopIndexMap[startIdx] = i
+			v.loopIndexMap[i] = startIdx
+		}
+	}
+
+	if len(stack) != 0 {
+		return fmt.Errorf("unmatched starting bracket(s) at instruction(s) %v", stack)
+	}
+
+	return nil
+}
+
 func (v *vm) run() (*Result, error) {
+	if err := v.buildLoopIndexMap(); err != nil {
+		return nil, err
+	}
+
 	bufWriter := bufio.NewWriter(v.writer)
 
-	for v.bcPtr < len(v.bytecode) {
-		instr := v.bytecode[v.bcPtr]
-
-		switch inst := instr.(type) {
+	for v.bytecodePtr < len(v.bytecode) {
+		i := v.bytecode[v.bytecodePtr]
+		switch inst := i.(type) {
 		case *bytecode.CellInc:
 			v.tape[v.tapePtr] = byte(int(v.tape[v.tapePtr]) + inst.Amount())
 
@@ -60,45 +97,17 @@ func (v *vm) run() (*Result, error) {
 			}
 
 			if v.tapePtr < 0 {
-				return nil, fmt.Errorf("tape pointer underflow at instruction %d", v.bcPtr)
+				return nil, fmt.Errorf("tape pointer underflow at instruction %d", v.bytecodePtr)
 			}
 
 		case *bytecode.LoopStart:
 			if v.tape[v.tapePtr] == 0 {
-				depth := 1
-				pos := v.bcPtr
-
-				for depth > 0 && pos < len(v.bytecode)-1 {
-					pos++
-					switch v.bytecode[pos].(type) {
-					case *bytecode.LoopStart:
-						depth++
-					case *bytecode.LoopEnd:
-						depth--
-					}
-				}
-
-				if depth != 0 {
-					return nil, fmt.Errorf("unmatched loop start at instruction %d", v.bcPtr)
-				}
-
-				v.bcPtr = pos
-			} else {
-				v.loopStack = append(v.loopStack, v.bcPtr)
+				v.bytecodePtr = v.loopIndexMap[v.bytecodePtr]
 			}
 
 		case *bytecode.LoopEnd:
 			if v.tape[v.tapePtr] != 0 {
-				if len(v.loopStack) == 0 {
-					return nil, fmt.Errorf("unmatched loop end at instruction %d", v.bcPtr)
-				}
-
-				start := v.loopStack[len(v.loopStack)-1]
-				v.bcPtr = start
-			} else {
-				if len(v.loopStack) > 0 {
-					v.loopStack = v.loopStack[:len(v.loopStack)-1]
-				}
+				v.bytecodePtr = v.loopIndexMap[v.bytecodePtr]
 			}
 
 		case *bytecode.Input:
@@ -121,7 +130,7 @@ func (v *vm) run() (*Result, error) {
 			}
 		}
 
-		v.bcPtr++
+		v.bytecodePtr++
 	}
 
 	if err := bufWriter.Flush(); err != nil {

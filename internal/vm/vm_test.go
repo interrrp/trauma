@@ -37,7 +37,7 @@ func TestMovePtr(t *testing.T) {
 	assertCell(t, r, 2, 3)
 
 	if _, err := runProg("<"); err == nil {
-		t.Error("expected error for tape pointer underflow")
+		t.Error("expected error on tape pointer underflow")
 	}
 }
 
@@ -45,7 +45,7 @@ func TestLoop(t *testing.T) {
 	r := mustRun(t, "+++[-]")
 	assertCell(t, r, 0, 0)
 
-	if _, err := runProg("[[[]]]"); err != nil {
+	if _, err := runProg("[+[+[+]+]+]"); err != nil {
 		t.Errorf("error on valid syntax: %v", err)
 	}
 
@@ -76,6 +76,12 @@ func TestOutput(t *testing.T) {
 
 	if writer.String() != "A" {
 		t.Errorf("expected output to be %q, got %q", "A", writer.String())
+	}
+}
+
+func Benchmark(b *testing.B) {
+	for b.Loop() {
+		_, _ = runProg("+++[-]")
 	}
 }
 
