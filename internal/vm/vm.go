@@ -10,21 +10,16 @@ import (
 
 func Run(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) (*Result, error) {
 	v := newVm(bc, reader, writer)
-	r, err := v.run()
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
+	return v.run()
 }
 
 type vm struct {
-	bytecode bytecode.Bytecode
-	bcPtr    int
+	bytecode  bytecode.Bytecode
+	bcPtr     int
+	loopStack []int
 
 	tape    []byte
 	tapePtr int
-
-	loopStack []int
 
 	reader io.Reader
 	writer io.Writer
@@ -34,24 +29,15 @@ func newVm(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) *vm {
 	return &vm{
 		bytecode:  bc,
 		bcPtr:     0,
-		tape:      []byte{0},
-		tapePtr:   0,
 		loopStack: []int{},
-		reader:    reader,
-		writer:    writer,
+
+		tape:    []byte{0},
+		tapePtr: 0,
+
+		reader: reader,
+		writer: writer,
 	}
 }
-
-type Result struct {
-	tape    []byte
-	tapePtr int
-}
-
-func newResult(v *vm) *Result {
-	return &Result{tape: v.tape, tapePtr: v.tapePtr}
-}
-func (r *Result) Tape() []byte { return r.tape }
-func (r *Result) TapePtr() int { return r.tapePtr }
 
 func (v *vm) run() (*Result, error) {
 	bufWriter := bufio.NewWriter(v.writer)
