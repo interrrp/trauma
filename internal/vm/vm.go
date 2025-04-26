@@ -13,7 +13,7 @@ func Run(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) (*Result, err
 	return v.run()
 }
 
-const tapePreallocSize = 50_000_000
+const tapePreallocSize = 5_000
 
 type vm struct {
 	bytecode     bytecode.Bytecode
