@@ -14,6 +14,36 @@ func TestPtrInc(t *testing.T) {
 	assertBytecode(t, "><")
 }
 
+func TestLoops(t *testing.T) {
+	assertBytecode(t, "[+[>>]--]",
+		"LoopStart",
+		"CellInc 1",
+		"LoopStart",
+		"PtrInc 2",
+		"LoopEnd",
+		"CellInc -2",
+		"LoopEnd")
+}
+
+func TestIO(t *testing.T) {
+	assertBytecode(t, "++[,].>.",
+		"CellInc 2",
+		"LoopStart",
+		"Input",
+		"LoopEnd",
+		"Output",
+		"PtrInc 1",
+		"Output")
+
+	assertBytecode(t, ",,,...",
+		"Input",
+		"Input",
+		"Input",
+		"Output",
+		"Output",
+		"Output")
+}
+
 func assertBytecode(t *testing.T, program string, expected ...string) {
 	b, err := Compile(program)
 	if err != nil {

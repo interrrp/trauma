@@ -44,6 +44,16 @@ func (c *compiler) compile() (Bytecode, error) {
 			if amount := c.handleInc('>', '<'); amount != 0 {
 				b = append(b, &PtrInc{amount})
 			}
+
+		case '[':
+			b = append(b, &LoopStart{})
+		case ']':
+			b = append(b, &LoopEnd{})
+
+		case ',':
+			b = append(b, &Input{})
+		case '.':
+			b = append(b, &Output{})
 		}
 
 		c.advance()
