@@ -9,8 +9,7 @@ import (
 )
 
 func Run(bc bytecode.Bytecode, reader io.Reader, writer io.Writer) (*Result, error) {
-	v := newVm(bc, reader, writer)
-	return v.run()
+	return newVm(bc, reader, writer).run()
 }
 
 const tapePreallocSize = 5_000
