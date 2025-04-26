@@ -37,22 +37,23 @@ func (c *compiler) compile() (Bytecode, error) {
 		switch c.currChar {
 		case '+', '-':
 			if amount := c.handleInc('+', '-'); amount != 0 {
-				b = append(b, &CellInc{amount})
+				b = append(b, &Inc{amount})
 			}
 
 		case '>', '<':
 			if amount := c.handleInc('>', '<'); amount != 0 {
-				b = append(b, &PtrInc{amount})
+				b = append(b, &IncPtr{amount})
 			}
 
 		case '[':
-			if len(c.program)-1-c.programPtr >= 2 && c.program[c.programPtr:c.programPtr+3] == "[-]" {
-				b = append(b, &CellEmpty{})
-				c.advance()
-				c.advance()
+			if dist, ok := c.patternMove(); ok {
+				b = append(b, &Move{dist})
+			} else if c.pattern("[-]") || c.pattern("[+]") {
+				b = append(b, &Clear{})
 			} else {
 				b = append(b, &LoopStart{})
 			}
+
 		case ']':
 			b = append(b, &LoopEnd{})
 
@@ -66,6 +67,43 @@ func (c *compiler) compile() (Bytecode, error) {
 	}
 
 	return b, nil
+}
+
+func (c *compiler) patternMove() (int, bool) {
+	remaining := len(c.program) - c.programPtr
+	if remaining < 6 {
+		return 0, false
+	}
+	if c.currChar != '[' || c.nextChar != '-' {
+		return 0, false
+	}
+	i := c.programPtr + 2
+	countR := 0
+	for ; i < len(c.program) && c.program[i] == '>'; i++ {
+		countR++
+	}
+	if countR < 1 {
+		return 0, false
+	}
+	if i >= len(c.program) || c.program[i] != '+' {
+		return 0, false
+	}
+	i++
+	countL := 0
+	for ; i < len(c.program) && c.program[i] == '<'; i++ {
+		countL++
+	}
+	if countL != countR {
+		return 0, false
+	}
+	if i >= len(c.program) || c.program[i] != ']' {
+		return 0, false
+	}
+	steps := i - c.programPtr
+	for j := 0; j < steps; j++ {
+		c.advance()
+	}
+	return countR, true
 }
 
 func (c *compiler) handleInc(pos, neg byte) int {
@@ -86,6 +124,19 @@ func (c *compiler) handleInc(pos, neg byte) int {
 	}
 
 	return amount
+}
+
+func (c *compiler) pattern(s string) bool {
+	if len(c.program)-1-c.programPtr < len(s)-1 {
+		return false
+	}
+	if c.program[c.programPtr:c.programPtr+len(s)] == s {
+		for range len(s) - 1 {
+			c.advance()
+		}
+		return true
+	}
+	return false
 }
 
 func (c *compiler) advance() {

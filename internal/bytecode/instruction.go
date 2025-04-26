@@ -7,22 +7,28 @@ type Instruction interface {
 	String() string
 }
 
-type CellInc struct{ amount int }
+type Inc struct{ amount int }
 
-func (ci *CellInc) Name() string   { return "CellInc" }
-func (ci *CellInc) Amount() int    { return ci.amount }
-func (ci *CellInc) String() string { return fmt.Sprintf("%s %d", ci.Name(), ci.Amount()) }
+func (i *Inc) Name() string   { return "Inc" }
+func (i *Inc) String() string { return fmt.Sprintf("%s %d", i.Name(), i.Amount()) }
+func (i *Inc) Amount() int    { return i.amount }
 
-type CellEmpty struct{}
+type Clear struct{}
 
-func (ce *CellEmpty) Name() string   { return "EmptyCell" }
-func (ce *CellEmpty) String() string { return ce.Name() }
+func (c *Clear) Name() string   { return "Clear" }
+func (c *Clear) String() string { return c.Name() }
 
-type PtrInc struct{ amount int }
+type Move struct{ distance int }
 
-func (pi *PtrInc) Name() string   { return "PtrInc" }
-func (pi *PtrInc) Amount() int    { return pi.amount }
-func (pi *PtrInc) String() string { return fmt.Sprintf("%s %d", pi.Name(), pi.Amount()) }
+func (m *Move) Name() string   { return "Move" }
+func (m *Move) String() string { return fmt.Sprintf("%s %d", m.Name(), m.Distance()) }
+func (m *Move) Distance() int  { return m.distance }
+
+type IncPtr struct{ amount int }
+
+func (pi *IncPtr) Name() string   { return "IncPtr" }
+func (pi *IncPtr) String() string { return fmt.Sprintf("%s %d", pi.Name(), pi.Amount()) }
+func (pi *IncPtr) Amount() int    { return pi.amount }
 
 type LoopStart struct{}
 

@@ -2,37 +2,37 @@ package bytecode
 
 import "testing"
 
-func TestCellInc(t *testing.T) {
-	assertBytecode(t, "+++--", "CellInc 1")
-	assertBytecode(t, "++---", "CellInc -1")
+func TestInc(t *testing.T) {
+	assertBytecode(t, "+++--", "Inc 1")
+	assertBytecode(t, "++---", "Inc -1")
 	assertBytecode(t, "+-")
 }
 
-func TestPtrInc(t *testing.T) {
-	assertBytecode(t, ">>><<", "PtrInc 1")
-	assertBytecode(t, ">><<<", "PtrInc -1")
+func TestIncPtr(t *testing.T) {
+	assertBytecode(t, ">>><<", "IncPtr 1")
+	assertBytecode(t, ">><<<", "IncPtr -1")
 	assertBytecode(t, "><")
 }
 
 func TestLoops(t *testing.T) {
 	assertBytecode(t, "[+[>>]--]",
 		"LoopStart",
-		"CellInc 1",
+		"Inc 1",
 		"LoopStart",
-		"PtrInc 2",
+		"IncPtr 2",
 		"LoopEnd",
-		"CellInc -2",
+		"Inc -2",
 		"LoopEnd")
 }
 
 func TestIO(t *testing.T) {
 	assertBytecode(t, "++[,].>.",
-		"CellInc 2",
+		"Inc 2",
 		"LoopStart",
 		"Input",
 		"LoopEnd",
 		"Output",
-		"PtrInc 1",
+		"IncPtr 1",
 		"Output")
 
 	assertBytecode(t, ",,,...",
@@ -44,17 +44,27 @@ func TestIO(t *testing.T) {
 		"Output")
 }
 
-func TestEmptyCell(t *testing.T) {
+func TestClear(t *testing.T) {
 	assertBytecode(t, "+++[-]",
-		"CellInc 3",
-		"EmptyCell")
+		"Inc 3",
+		"Clear")
 
 	assertBytecode(t, "+[++[-]]",
-		"CellInc 1",
+		"Inc 1",
 		"LoopStart",
-		"CellInc 2",
-		"EmptyCell",
+		"Inc 2",
+		"Clear",
 		"LoopEnd")
+}
+
+func TestMove(t *testing.T) {
+	assertBytecode(t, "++[->+<]",
+		"Inc 2",
+		"Move 1")
+
+	assertBytecode(t, "+++[-<<+>>]",
+		"Inc 3",
+		"Move -2")
 }
 
 func assertBytecode(t *testing.T, program string, expected ...string) {

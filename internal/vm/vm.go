@@ -82,13 +82,17 @@ func (v *vm) run() (*Result, error) {
 	for v.bytecodePtr < len(v.bytecode) {
 		i := v.bytecode[v.bytecodePtr]
 		switch inst := i.(type) {
-		case *bytecode.CellInc:
+		case *bytecode.Inc:
 			v.tape[v.tapePtr] = byte(int(v.tape[v.tapePtr]) + inst.Amount())
 
-		case *bytecode.CellEmpty:
+		case *bytecode.Clear:
 			v.tape[v.tapePtr] = 0
 
-		case *bytecode.PtrInc:
+		case *bytecode.Move:
+			v.tape[v.tapePtr+inst.Distance()] += v.tape[v.tapePtr]
+			v.tape[v.tapePtr] = 0
+
+		case *bytecode.IncPtr:
 			v.tapePtr += inst.Amount()
 
 			for v.tapePtr >= len(v.tape) {

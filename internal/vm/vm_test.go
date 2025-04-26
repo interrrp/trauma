@@ -25,7 +25,7 @@ func TestDecrement(t *testing.T) {
 	assertCell(t, r, 0, 255-2)
 }
 
-func TestMovePtr(t *testing.T) {
+func TestIncPtr(t *testing.T) {
 	r := mustRun(t, ">>><")
 	if r.TapePtr() != 2 {
 		t.Errorf("expected tape pointer to be 2, got %d", r.TapePtr())
@@ -39,6 +39,16 @@ func TestMovePtr(t *testing.T) {
 	if _, err := runProg("<"); err == nil {
 		t.Error("expected error on tape pointer underflow")
 	}
+}
+
+func TestMove(t *testing.T) {
+	r := mustRun(t, "+++[->+<]")
+	assertCell(t, r, 0, 0)
+	assertCell(t, r, 1, 3)
+
+	r = mustRun(t, "+>+++[-<+>]")
+	assertCell(t, r, 0, 4)
+	assertCell(t, r, 1, 0)
 }
 
 func TestLoop(t *testing.T) {
@@ -80,12 +90,6 @@ func TestOutput(t *testing.T) {
 
 	if writer.String() != "A" {
 		t.Errorf("expected output to be %q, got %q", "A", writer.String())
-	}
-}
-
-func Benchmark(b *testing.B) {
-	for b.Loop() {
-		_, _ = runProg("+++[-]")
 	}
 }
 
