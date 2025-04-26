@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/interrrp/trauma/interpreter"
+	"github.com/interrrp/trauma/pkg/trauma"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	}
 	prog := string(b)
 
-	if _, err := interpreter.Run(prog); err != nil {
+	if _, err := trauma.Run(prog, os.Stdin, os.Stdout); err != nil {
 		fail("%v", err)
 	}
 }

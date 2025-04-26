@@ -1,10 +1,12 @@
-package interpreter
+package vm
 
 import (
 	"bytes"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/interrrp/trauma/internal/bytecode"
 )
 
 func TestIncrement(t *testing.T) {
@@ -34,7 +36,7 @@ func TestMovePtr(t *testing.T) {
 	assertCell(t, r, 1, 2)
 	assertCell(t, r, 2, 3)
 
-	if _, err := Run("<"); err == nil {
+	if _, err := runProg("<"); err == nil {
 		t.Error("expected error for tape pointer underflow")
 	}
 }
@@ -43,17 +45,22 @@ func TestLoop(t *testing.T) {
 	r := mustRun(t, "+++[-]")
 	assertCell(t, r, 0, 0)
 
-	if _, err := Run("[[[]]]"); err != nil {
+	if _, err := runProg("[[[]]]"); err != nil {
 		t.Errorf("error on valid syntax: %v", err)
 	}
 
-	if _, err := Run("[[["); err == nil {
+	if _, err := runProg("[[["); err == nil {
 		t.Error("expected error on invalid syntax")
 	}
 }
 
+var (
+	nullReader = strings.NewReader("")
+	nullWriter = io.Discard
+)
+
 func TestInput(t *testing.T) {
-	r, err := RunWithCustomIO(",", strings.NewReader("A"), io.Discard)
+	r, err := runProgWithCustomIO(",", strings.NewReader("A"), nullWriter)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
 	}
@@ -62,7 +69,7 @@ func TestInput(t *testing.T) {
 
 func TestOutput(t *testing.T) {
 	var writer bytes.Buffer
-	_, err := RunWithCustomIO("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.", strings.NewReader(""), &writer)
+	_, err := runProgWithCustomIO("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.", nullReader, &writer)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
 	}
@@ -73,11 +80,27 @@ func TestOutput(t *testing.T) {
 }
 
 func mustRun(t *testing.T, program string) *Result {
-	r, err := Run(program)
+	r, err := runProg(program)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
 	}
 	return r
+}
+
+func runProg(program string) (*Result, error) {
+	bc, err := bytecode.Compile(program)
+	if err != nil {
+		return nil, err
+	}
+	return Run(bc, nullReader, nullWriter)
+}
+
+func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*Result, error) {
+	bc, err := bytecode.Compile(program)
+	if err != nil {
+		return nil, err
+	}
+	return Run(bc, reader, writer)
 }
 
 func assertCell(t *testing.T, r *Result, idx int, val byte) {
