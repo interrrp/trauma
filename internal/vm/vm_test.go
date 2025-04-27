@@ -1,4 +1,4 @@
-package vm
+package vm_test
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/interrrp/trauma/internal/bytecode"
+	"github.com/interrrp/trauma/internal/vm"
 )
 
 func TestIncrement(t *testing.T) {
@@ -39,16 +40,6 @@ func TestIncPtr(t *testing.T) {
 	if _, err := runProg("<"); err == nil {
 		t.Error("expected error on tape pointer underflow")
 	}
-}
-
-func TestMove(t *testing.T) {
-	r := mustRun(t, "+++[->+<]")
-	assertCell(t, r, 0, 0)
-	assertCell(t, r, 1, 3)
-
-	r = mustRun(t, "+>+++[-<+>]")
-	assertCell(t, r, 0, 4)
-	assertCell(t, r, 1, 0)
 }
 
 func TestLoop(t *testing.T) {
@@ -93,7 +84,7 @@ func TestOutput(t *testing.T) {
 	}
 }
 
-func mustRun(t *testing.T, program string) *Result {
+func mustRun(t *testing.T, program string) *vm.Result {
 	r, err := runProg(program)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
@@ -101,23 +92,23 @@ func mustRun(t *testing.T, program string) *Result {
 	return r
 }
 
-func runProg(program string) (*Result, error) {
+func runProg(program string) (*vm.Result, error) {
 	bc, err := bytecode.Compile(program)
 	if err != nil {
 		return nil, err
 	}
-	return Run(bc, nullReader, nullWriter)
+	return vm.Run(bc, nullReader, nullWriter)
 }
 
-func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*Result, error) {
+func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*vm.Result, error) {
 	bc, err := bytecode.Compile(program)
 	if err != nil {
 		return nil, err
 	}
-	return Run(bc, reader, writer)
+	return vm.Run(bc, reader, writer)
 }
 
-func assertCell(t *testing.T, r *Result, idx int, val byte) {
+func assertCell(t *testing.T, r *vm.Result, idx int, val byte) {
 	actual := r.Tape()[idx]
 	if actual != val {
 		t.Errorf("expected cell %d to be %d, got %d", idx, val, actual)

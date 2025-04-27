@@ -8,9 +8,9 @@ func Compile(program string) (Bytecode, error) {
 	}
 
 	c := &compiler{
-		program:    program,
-		programPtr: 0,
-		currChar:   program[0],
+		program:     program,
+		programPtr:  0,
+		currentChar: program[0],
 	}
 
 	if len(program) > 1 {
@@ -26,29 +26,29 @@ type compiler struct {
 	program    string
 	programPtr int
 
-	currChar byte
-	nextChar byte
+	currentChar byte
+	nextChar    byte
 }
 
 func (c *compiler) compile() (Bytecode, error) {
 	b := Bytecode{}
 
 	for c.programPtr < len(c.program) {
-		switch c.currChar {
+		switch c.currentChar {
 		case '+', '-':
-			if amount := c.handleInc('+', '-'); amount != 0 {
+			if amount := c.sumRepeatableCommands('+', '-'); amount != 0 {
 				b = append(b, &Inc{amount})
 			}
 
 		case '>', '<':
-			if amount := c.handleInc('>', '<'); amount != 0 {
+			if amount := c.sumRepeatableCommands('>', '<'); amount != 0 {
 				b = append(b, &IncPtr{amount})
 			}
 
 		case '[':
-			if dist, ok := c.patternMove(); ok {
-				b = append(b, &Move{dist})
-			} else if c.pattern("[-]") || c.pattern("[+]") {
+			if distance, ok := c.findMovePattern(); ok {
+				b = append(b, &Move{distance})
+			} else if c.findPattern("[-]") || c.findPattern("[+]") {
 				b = append(b, &Clear{})
 			} else {
 				b = append(b, &LoopStart{})
@@ -69,12 +69,12 @@ func (c *compiler) compile() (Bytecode, error) {
 	return b, nil
 }
 
-func (c *compiler) patternMove() (int, bool) {
+func (c *compiler) findMovePattern() (int, bool) {
 	remaining := len(c.program) - c.programPtr
 	if remaining < 6 {
 		return 0, false
 	}
-	if c.currChar != '[' || c.nextChar != '-' {
+	if c.currentChar != '[' || c.nextChar != '-' {
 		return 0, false
 	}
 	i := c.programPtr + 2
@@ -106,11 +106,11 @@ func (c *compiler) patternMove() (int, bool) {
 	return countR, true
 }
 
-func (c *compiler) handleInc(pos, neg byte) int {
+func (c *compiler) sumRepeatableCommands(pos, neg byte) int {
 	var amount int
-	if c.currChar == pos {
+	if c.currentChar == pos {
 		amount = 1
-	} else if c.currChar == neg {
+	} else if c.currentChar == neg {
 		amount = -1
 	}
 
@@ -126,7 +126,7 @@ func (c *compiler) handleInc(pos, neg byte) int {
 	return amount
 }
 
-func (c *compiler) pattern(s string) bool {
+func (c *compiler) findPattern(s string) bool {
 	if len(c.program)-1-c.programPtr < len(s)-1 {
 		return false
 	}
@@ -142,12 +142,12 @@ func (c *compiler) pattern(s string) bool {
 func (c *compiler) advance() {
 	c.programPtr++
 	if c.programPtr >= len(c.program) {
-		c.currChar = '?'
+		c.currentChar = '?'
 		c.nextChar = '?'
 		return
 	}
 
-	c.currChar = c.program[c.programPtr]
+	c.currentChar = c.program[c.programPtr]
 	if c.programPtr+1 < len(c.program) {
 		c.nextChar = c.program[c.programPtr+1]
 	} else {

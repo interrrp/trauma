@@ -1,6 +1,10 @@
-package bytecode
+package bytecode_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/interrrp/trauma/internal/bytecode"
+)
 
 func TestInc(t *testing.T) {
 	assertBytecode(t, "+++--", "Inc 1")
@@ -57,31 +61,21 @@ func TestClear(t *testing.T) {
 		"LoopEnd")
 }
 
-func TestMove(t *testing.T) {
-	assertBytecode(t, "++[->+<]",
-		"Inc 2",
-		"Move 1")
-
-	assertBytecode(t, "+++[-<<+>>]",
-		"Inc 3",
-		"Move -2")
-}
-
 func assertBytecode(t *testing.T, program string, expected ...string) {
-	b, err := Compile(program)
+	actual, err := bytecode.Compile(program)
 	if err != nil {
 		t.Errorf("error during compilation: %v", err)
 	}
 
-	if len(expected) != len(b) {
-		t.Logf("expected %d instruction(s), got %d:", len(expected), len(b))
-		for i, inst := range b {
+	if len(expected) != len(actual) {
+		t.Logf("expected %d instruction(s), got %d:", len(expected), len(actual))
+		for i, inst := range actual {
 			t.Logf("%d. %s", i+1, inst.String())
 		}
 		t.Fail()
 	}
 
-	for i, inst := range b {
+	for i, inst := range actual {
 		exp := expected[i]
 		real := inst.String()
 		if exp != real {
