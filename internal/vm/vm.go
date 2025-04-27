@@ -48,11 +48,11 @@ func (v *vm) buildLoopIndexMap() error {
 	}
 
 	for currentIndex, inst := range v.code {
-		switch inst.(type) {
-		case *bytecode.LoopStart:
+		switch inst.Kind() {
+		case bytecode.LoopStart:
 			stack = append(stack, currentIndex)
 
-		case *bytecode.LoopEnd:
+		case bytecode.LoopEnd:
 			if len(stack) == 0 {
 				return fmt.Errorf("unmatched ending bracket at instruction %d", currentIndex)
 			}
@@ -83,19 +83,19 @@ func (v *vm) run() (*Result, error) {
 	for v.codePtr < len(v.code) {
 		currentCell := &v.tape[v.tapePtr]
 
-		i := v.code[v.codePtr]
-		switch inst := i.(type) {
-		case *bytecode.Inc:
+		inst := v.code[v.codePtr]
+		switch inst.Kind() {
+		case bytecode.Inc:
 			*currentCell = byte(int(*currentCell) + inst.Amount())
 
-		case *bytecode.Clear:
+		case bytecode.Clear:
 			*currentCell = 0
 
-		case *bytecode.Move:
-			v.tape[v.tapePtr+inst.Distance()] += *currentCell
+		case bytecode.Move:
+			v.tape[v.tapePtr+inst.Amount()] += *currentCell
 			*currentCell = 0
 
-		case *bytecode.IncPtr:
+		case bytecode.IncPtr:
 			v.tapePtr += inst.Amount()
 
 			for v.tapePtr >= len(v.tape) {
@@ -106,24 +106,24 @@ func (v *vm) run() (*Result, error) {
 				return nil, fmt.Errorf("tape pointer underflow at instruction %d", v.codePtr)
 			}
 
-		case *bytecode.LoopStart:
+		case bytecode.LoopStart:
 			if *currentCell == 0 {
 				v.codePtr = v.loopIndexMap[v.codePtr]
 			}
 
-		case *bytecode.LoopEnd:
+		case bytecode.LoopEnd:
 			if *currentCell != 0 {
 				v.codePtr = v.loopIndexMap[v.codePtr]
 			}
 
-		case *bytecode.Input:
+		case bytecode.Input:
 			b := make([]byte, 1)
 			if _, err := v.reader.Read(b); err != nil {
 				return nil, err
 			}
 			*currentCell = b[0]
 
-		case *bytecode.Output:
+		case bytecode.Output:
 			s := []byte{*currentCell}
 			if _, err := bufWriter.Write(s); err != nil {
 				return nil, err

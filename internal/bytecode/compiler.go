@@ -37,30 +37,30 @@ func (c *compiler) compile() (Bytecode, error) {
 		switch c.currentChar {
 		case '+', '-':
 			if amount := c.sumRepeatableCommands('+', '-'); amount != 0 {
-				b = append(b, &Inc{amount})
+				b = append(b, Instruction{Inc, amount})
 			}
 
 		case '>', '<':
 			if amount := c.sumRepeatableCommands('>', '<'); amount != 0 {
-				b = append(b, &IncPtr{amount})
+				b = append(b, Instruction{IncPtr, amount})
 			}
 
 		case '[':
 			if distance, ok := c.findMovePattern(); ok {
-				b = append(b, &Move{distance})
+				b = append(b, Instruction{Move, distance})
 			} else if c.findPattern("[-]") || c.findPattern("[+]") {
-				b = append(b, &Clear{})
+				b = append(b, Instruction{Clear, 0})
 			} else {
-				b = append(b, &LoopStart{})
+				b = append(b, Instruction{LoopStart, 0})
 			}
 
 		case ']':
-			b = append(b, &LoopEnd{})
+			b = append(b, Instruction{LoopEnd, 0})
 
 		case ',':
-			b = append(b, &Input{})
+			b = append(b, Instruction{Input, 0})
 		case '.':
-			b = append(b, &Output{})
+			b = append(b, Instruction{Output, 0})
 		}
 
 		c.advance()
