@@ -11,31 +11,31 @@ import (
 )
 
 func TestIncrement(t *testing.T) {
-	r := mustRun(t, "+++")
-	assertCell(t, r, 0, 3)
+	vm := mustRun(t, "+++")
+	assertCell(t, vm, 0, 3)
 
-	r = mustRun(t, "+++++")
-	assertCell(t, r, 0, 5)
+	vm = mustRun(t, "+++++")
+	assertCell(t, vm, 0, 5)
 }
 
 func TestDecrement(t *testing.T) {
-	r := mustRun(t, "++-")
-	assertCell(t, r, 0, 1)
+	vm := mustRun(t, "++-")
+	assertCell(t, vm, 0, 1)
 
-	r = mustRun(t, "---")
-	assertCell(t, r, 0, 255-2)
+	vm = mustRun(t, "---")
+	assertCell(t, vm, 0, 255-2)
 }
 
 func TestIncPtr(t *testing.T) {
-	r := mustRun(t, ">>><")
-	if r.TapePtr() != 2 {
-		t.Errorf("expected tape pointer to be 2, got %d", r.TapePtr())
+	vm := mustRun(t, ">>><")
+	if vm.TapePtr() != 2 {
+		t.Errorf("expected tape pointer to be 2, got %d", vm.TapePtr())
 	}
 
-	r = mustRun(t, "+>++>><+++")
-	assertCell(t, r, 0, 1)
-	assertCell(t, r, 1, 2)
-	assertCell(t, r, 2, 3)
+	vm = mustRun(t, "+>++>><+++")
+	assertCell(t, vm, 0, 1)
+	assertCell(t, vm, 1, 2)
+	assertCell(t, vm, 2, 3)
 
 	if _, err := runProg("<"); err == nil {
 		t.Error("expected error on tape pointer underflow")
@@ -43,8 +43,8 @@ func TestIncPtr(t *testing.T) {
 }
 
 func TestLoop(t *testing.T) {
-	r := mustRun(t, "+++[-]")
-	assertCell(t, r, 0, 0)
+	vm := mustRun(t, "+++[-]")
+	assertCell(t, vm, 0, 0)
 
 	if _, err := runProg("[+[+[+]+]+]"); err != nil {
 		t.Errorf("error on valid syntax: %v", err)
@@ -65,11 +65,11 @@ var (
 )
 
 func TestInput(t *testing.T) {
-	r, err := runProgWithCustomIO(",", strings.NewReader("A"), nullWriter)
+	vm, err := runProgWithCustomIO(",", strings.NewReader("A"), nullWriter)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
 	}
-	assertCell(t, r, 0, 'A')
+	assertCell(t, vm, 0, 'A')
 }
 
 func TestOutput(t *testing.T) {
@@ -84,7 +84,7 @@ func TestOutput(t *testing.T) {
 	}
 }
 
-func mustRun(t *testing.T, program string) *vm.Result {
+func mustRun(t *testing.T, program string) *vm.VM {
 	r, err := runProg(program)
 	if err != nil {
 		t.Errorf("error during execution: %v", err)
@@ -92,7 +92,7 @@ func mustRun(t *testing.T, program string) *vm.Result {
 	return r
 }
 
-func runProg(program string) (*vm.Result, error) {
+func runProg(program string) (*vm.VM, error) {
 	bc, err := bytecode.Compile(program)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func runProg(program string) (*vm.Result, error) {
 	return vm.Run(bc, nullReader, nullWriter)
 }
 
-func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*vm.Result, error) {
+func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*vm.VM, error) {
 	bc, err := bytecode.Compile(program)
 	if err != nil {
 		return nil, err
@@ -108,8 +108,8 @@ func runProgWithCustomIO(program string, reader io.Reader, writer io.Writer) (*v
 	return vm.Run(bc, reader, writer)
 }
 
-func assertCell(t *testing.T, r *vm.Result, idx int, val byte) {
-	actual := r.Tape()[idx]
+func assertCell(t *testing.T, vm *vm.VM, idx int, val byte) {
+	actual := vm.Tape()[idx]
 	if actual != val {
 		t.Errorf("expected cell %d to be %d, got %d", idx, val, actual)
 	}

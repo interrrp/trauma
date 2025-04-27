@@ -7,10 +7,10 @@ import (
 	"github.com/interrrp/trauma/internal/vm"
 )
 
-func Run(program string, reader io.Reader, writer io.Writer) (*vm.Result, error) {
-	bc, err := bytecode.Compile(program)
+func Run(program string, reader io.Reader, writer io.Writer) (*vm.VM, error) {
+	code, err := bytecode.Compile(program)
 	if err != nil {
 		return nil, err
 	}
-	return vm.Run(bc, reader, writer)
+	return vm.Run(code, reader, writer)
 }

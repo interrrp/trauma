@@ -8,13 +8,17 @@ import (
 	"github.com/interrrp/trauma/internal/bytecode"
 )
 
-func Run(code bytecode.Bytecode, reader io.Reader, writer io.Writer) (*Result, error) {
-	return newVm(code, reader, writer).run()
+func Run(code bytecode.Bytecode, reader io.Reader, writer io.Writer) (*VM, error) {
+	vm := newVM(code, reader, writer)
+	if err := vm.run(); err != nil {
+		return vm, err
+	}
+	return vm, nil
 }
 
 const tapePreallocSize = 5_000
 
-type vm struct {
+type VM struct {
 	code         bytecode.Bytecode
 	codePtr      int
 	loopIndexMap []int
@@ -26,8 +30,8 @@ type vm struct {
 	writer io.Writer
 }
 
-func newVm(code bytecode.Bytecode, reader io.Reader, writer io.Writer) *vm {
-	return &vm{
+func newVM(code bytecode.Bytecode, reader io.Reader, writer io.Writer) *VM {
+	return &VM{
 		code:    code,
 		codePtr: 0,
 
@@ -39,15 +43,18 @@ func newVm(code bytecode.Bytecode, reader io.Reader, writer io.Writer) *vm {
 	}
 }
 
-func (v *vm) buildLoopIndexMap() error {
+func (vm *VM) Tape() []byte { return vm.tape }
+func (vm *VM) TapePtr() int { return vm.tapePtr }
+
+func (vm *VM) buildLoopIndexMap() error {
 	var stack []int
 
-	v.loopIndexMap = make([]int, len(v.code))
-	for i := range v.loopIndexMap {
-		v.loopIndexMap[i] = -1
+	vm.loopIndexMap = make([]int, len(vm.code))
+	for i := range vm.loopIndexMap {
+		vm.loopIndexMap[i] = -1
 	}
 
-	for currentIndex, inst := range v.code {
+	for currentIndex, inst := range vm.code {
 		switch inst.Kind() {
 		case bytecode.LoopStart:
 			stack = append(stack, currentIndex)
@@ -61,8 +68,8 @@ func (v *vm) buildLoopIndexMap() error {
 			closeIndex := currentIndex
 			stack = stack[:len(stack)-1]
 
-			v.loopIndexMap[startIndex] = closeIndex
-			v.loopIndexMap[closeIndex] = startIndex
+			vm.loopIndexMap[startIndex] = closeIndex
+			vm.loopIndexMap[closeIndex] = startIndex
 		}
 	}
 
@@ -73,17 +80,17 @@ func (v *vm) buildLoopIndexMap() error {
 	return nil
 }
 
-func (v *vm) run() (*Result, error) {
-	if err := v.buildLoopIndexMap(); err != nil {
-		return nil, err
+func (vm *VM) run() error {
+	if err := vm.buildLoopIndexMap(); err != nil {
+		return err
 	}
 
-	bufWriter := bufio.NewWriter(v.writer)
+	bufWriter := bufio.NewWriter(vm.writer)
 
-	for v.codePtr < len(v.code) {
-		currentCell := &v.tape[v.tapePtr]
+	for vm.codePtr < len(vm.code) {
+		currentCell := &vm.tape[vm.tapePtr]
+		inst := vm.code[vm.codePtr]
 
-		inst := v.code[v.codePtr]
 		switch inst.Kind() {
 		case bytecode.Inc:
 			*currentCell = byte(int(*currentCell) + inst.Amount())
@@ -92,55 +99,55 @@ func (v *vm) run() (*Result, error) {
 			*currentCell = 0
 
 		case bytecode.Move:
-			v.tape[v.tapePtr+inst.Amount()] += *currentCell
+			vm.tape[vm.tapePtr+inst.Amount()] += *currentCell
 			*currentCell = 0
 
 		case bytecode.IncPtr:
-			v.tapePtr += inst.Amount()
+			vm.tapePtr += inst.Amount()
 
-			for v.tapePtr >= len(v.tape) {
-				v.tape = append(v.tape, 0)
+			for vm.tapePtr >= len(vm.tape) {
+				vm.tape = append(vm.tape, 0)
 			}
 
-			if v.tapePtr < 0 {
-				return nil, fmt.Errorf("tape pointer underflow at instruction %d", v.codePtr)
+			if vm.tapePtr < 0 {
+				return fmt.Errorf("tape pointer underflow at instruction %d", vm.codePtr)
 			}
 
 		case bytecode.LoopStart:
 			if *currentCell == 0 {
-				v.codePtr = v.loopIndexMap[v.codePtr]
+				vm.codePtr = vm.loopIndexMap[vm.codePtr]
 			}
 
 		case bytecode.LoopEnd:
 			if *currentCell != 0 {
-				v.codePtr = v.loopIndexMap[v.codePtr]
+				vm.codePtr = vm.loopIndexMap[vm.codePtr]
 			}
 
 		case bytecode.Input:
 			b := make([]byte, 1)
-			if _, err := v.reader.Read(b); err != nil {
-				return nil, err
+			if _, err := vm.reader.Read(b); err != nil {
+				return err
 			}
 			*currentCell = b[0]
 
 		case bytecode.Output:
 			s := []byte{*currentCell}
 			if _, err := bufWriter.Write(s); err != nil {
-				return nil, err
+				return err
 			}
 			if *currentCell == '\n' {
 				if err := bufWriter.Flush(); err != nil {
-					return nil, err
+					return err
 				}
 			}
 		}
 
-		v.codePtr++
+		vm.codePtr++
 	}
 
 	if err := bufWriter.Flush(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return newResult(v), nil
+	return nil
 }
